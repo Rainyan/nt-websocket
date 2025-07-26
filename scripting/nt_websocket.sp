@@ -64,8 +64,6 @@
 
 #define PLUGIN_VERSION "2.0.0"
 
-#define NEO_MAX_CLIENTS 32
-
 // Using '%' for the delimiter, because it is impossible for a player to have that character in their name.
 #define DELIMITER '%'
 
@@ -82,10 +80,10 @@ new Handle:g_hostname;
 
 int g_iRoundNumber = -1;
 
-int g_playerXP[NEO_MAX_CLIENTS + 1];
-int g_playerDeaths[NEO_MAX_CLIENTS + 1];
-char g_playerActiveWeapon[NEO_MAX_CLIENTS + 1][20];
-int g_playerEquippedWeapons[NEO_MAX_CLIENTS + 1];
+int g_playerXP[NEO_MAXPLAYERS + 1];
+int g_playerDeaths[NEO_MAXPLAYERS + 1];
+char g_playerActiveWeapon[NEO_MAXPLAYERS + 1][20];
+int g_playerEquippedWeapons[NEO_MAXPLAYERS + 1];
 
 int g_currentObserver = 0;
 int g_currentObserverTarget = 0;
