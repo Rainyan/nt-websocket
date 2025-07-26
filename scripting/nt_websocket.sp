@@ -62,11 +62,12 @@
 #include <nt_competitive_vetos_enum>
 #include <nt_competitive_vetos_natives>
 
-#define PLUGIN_VERSION "1.6.2"
+#define PLUGIN_VERSION "2.0.0"
 
 #define NEO_MAX_CLIENTS 32
 
-#define DELIMITER ':'
+// Using '%' for the delimiter, because it is impossible for a player to have that character in their name.
+#define DELIMITER '%'
 
 // If true, include the "sm_relaydbg" and "sm_relaydbg_populate" server commands for sending simulated relay data.
 #define NT_RELAY_DEBUG false
