@@ -2,6 +2,7 @@
 
 // Changeolg
 
+// 2.0.0 - Change delimiter char from ':' to '%', because '%' is guaranteed to never appear in a player name.
 // 1.6.2 - They're less reliable than I thought, so make sure the ghost is considered unheld at round start.
 // 1.6.1 - Use ghostcap events for the ghost since they're more reliable
 // 1.6 - Send equip/drop weapon events.
