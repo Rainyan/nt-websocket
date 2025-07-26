@@ -66,6 +66,8 @@
 
 #define NEO_MAX_CLIENTS 32
 
+#define DELIMITER ':'
+
 // If true, include the "sm_relaydbg" and "sm_relaydbg_populate" server commands for sending simulated relay data.
 #define NT_RELAY_DEBUG false
 // If true, print all SendToAllChildren() relay data to the SRCDS server console.
@@ -229,12 +231,15 @@ public void OnMapVetoStageUpdate(VetoStage new_veto_stage, int param2)
 		if (veto_pool_size > 0) {
 			int buff_size = veto_pool_size * PLATFORM_MAX_PATH + veto_pool_size + 1;
 			char[] vetoListBuff = new char[buff_size];
-			int num_written = Format(vetoListBuff, buff_size, "L%d:", veto_pool_size);
+			int num_written = Format(vetoListBuff, buff_size, "L%d%c", veto_pool_size, DELIMITER);
 			char map_name[PLATFORM_MAX_PATH];
 			for (int i = 0; i < veto_pool_size; ++i) {
 				if (CompetitiveVetos_GetNameOfMapPoolMap(i, map_name, sizeof(map_name)) != 0) {
 					num_written += StrCat(vetoListBuff, buff_size, map_name);
-					num_written += StrCat(vetoListBuff, buff_size, ":");
+					if (num_written < buff_size)
+					{
+						vetoListBuff[(num_written++) - 1] = DELIMITER;
+					}
 				}
 			}
 			vetoListBuff[num_written - 1] = '\0'; // Remove trailing delimiter
@@ -243,14 +248,14 @@ public void OnMapVetoStageUpdate(VetoStage new_veto_stage, int param2)
 	}
 
 	char sBuffer[7];
-	Format(sBuffer, sizeof(sBuffer), "Y%d:%d", new_veto_stage, param2);
+	Format(sBuffer, sizeof(sBuffer), "Y%d%c%d", new_veto_stage, DELIMITER, param2);
 	SendToAllChildren(sBuffer);
 }
 
 public void OnMapVetoPick(VetoStage current_veto_stage, int vetoing_team, const char[] map_name)
 {
 	char sBuffer[6 + PLATFORM_MAX_PATH + 1];
-	Format(sBuffer, sizeof(sBuffer), "Z%d:%d:%s", current_veto_stage, vetoing_team, map_name);
+	Format(sBuffer, sizeof(sBuffer), "Z%d%c%d%c%s", current_veto_stage, DELIMITER, vetoing_team, DELIMITER, map_name);
 	SendToAllChildren(sBuffer);
 }
 
@@ -333,20 +338,27 @@ public Action Timer_WepsDebug_AsyncRelay(Handle timer, int phase)
 		switch (phase) {
 			case 0:
 			{
-				Format(sBuffer, sizeof(sBuffer), "C%d:%d:%s:%d:0:0:0:100:0::Fake Player %d", fakeuserid++, i, "STEAM_ID_PLACEHOLDER", team, i, i);
+				Format(sBuffer, sizeof(sBuffer), "C%d%c%d%c%s%c%d%c0%c0%c0%c100%c0%c%cFake Player %d",
+					fakeuserid++, DELIMITER,
+					i, DELIMITER,
+					"STEAM_ID_PLACEHOLDER", DELIMITER,
+					team, DELIMITER,
+					DELIMITER, DELIMITER, DELIMITER, DELIMITER, DELIMITER, DELIMITER,
+					i,
+					i);
 			}
 			case 1:
 			{
-				Format(sBuffer, sizeof(sBuffer), "T%d:%d", fakeuserid, team);
+				Format(sBuffer, sizeof(sBuffer), "T%d%c%d", fakeuserid, DELIMITER, team);
 			}
 			case 2:
 			{
-				Format(sBuffer, sizeof(sBuffer), "S%d:%d:1", fakeuserid, playerclass);
+				Format(sBuffer, sizeof(sBuffer), "S%d%c%d%c1", fakeuserid, DELIMITER, playerclass, DELIMITER);
 			}
 			case 3:
 			{
 				int wep_index = (i - 1) % sizeof(weapon_list); // cycle through weapon_list for predictable position in the overlay, so it's easier to compare visually
-				Format(sBuffer, sizeof(sBuffer), "W%d:%s", i, weapon_list[wep_index]);
+				Format(sBuffer, sizeof(sBuffer), "W%d%c%s", i, DELIMITER, weapon_list[wep_index]);
 			}
 			default:
 			{
@@ -412,7 +424,7 @@ public Action CheckScores(Handle timer)
 				g_playerXP[i] = xp;
 				g_playerDeaths[i] = deaths;
 				char sBuffer[128];
-				Format(sBuffer, sizeof(sBuffer), "P%d:%d:%d", GetClientUserId(i), xp, deaths);
+				Format(sBuffer, sizeof(sBuffer), "P%d%c%d%c%d", GetClientUserId(i), DELIMITER, xp, DELIMITER, deaths);
 				SendToAllChildren(sBuffer);
 			}
 		}
@@ -475,7 +487,12 @@ public OnClientPutInServer(client)
 
 	decl String:sBuffer[128];
 	GetClientAuthId(client, AuthId_SteamID64, sBuffer, sizeof(sBuffer));
-	Format(sBuffer, sizeof(sBuffer), "C%d:%d:%s:%d:0:0:0:100:0::%N", GetClientUserId(client), client, sBuffer, GetClientTeam(client), client);
+	Format(sBuffer, sizeof(sBuffer), "C%d%c%d%c%s%c%d%c0%c0%c0%c100%c0%c%c%N",
+		GetClientUserId(client), DELIMITER,
+		client, DELIMITER,
+		sBuffer, DELIMITER,
+		GetClientTeam(client), DELIMITER, DELIMITER, DELIMITER, DELIMITER, DELIMITER, DELIMITER, DELIMITER,
+		client);
 
 	SendToAllChildren(sBuffer);
 }
@@ -521,7 +538,7 @@ public Event_OnPlayerTeam(Handle:event, const String:name[], bool:dontBroadcast)
 		return;
 
 	decl String:sBuffer[10];
-	Format(sBuffer, sizeof(sBuffer), "T%d:%d", userid, team);
+	Format(sBuffer, sizeof(sBuffer), "T%d%c%d", userid, DELIMITER, team);
 
 	SendToAllChildren(sBuffer);
 }
@@ -537,7 +554,7 @@ public Event_OnPlayerDeath(Handle:event, const String:name[], bool:dontBroadcast
 
 	new String:sBuffer[64];
 	GetEventString(event, "weapon", sBuffer, sizeof(sBuffer));
-	Format(sBuffer, sizeof(sBuffer), "K%d:%d:%s", victim, attacker, sBuffer);
+	Format(sBuffer, sizeof(sBuffer), "K%d%c%d%c%s", victim, DELIMITER, attacker, DELIMITER, sBuffer);
 
 	SendToAllChildren(sBuffer);
 
@@ -561,7 +578,7 @@ public Event_OnPlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast
 	int class = GetPlayerClass(client);
 
 	decl String:sBuffer[20];
-	Format(sBuffer, sizeof(sBuffer), "S%d:%d:%d", userid, class, IsPlayerAlive(client));
+	Format(sBuffer, sizeof(sBuffer), "S%d%c%d%c%d", userid, DELIMITER, class, DELIMITER, IsPlayerAlive(client));
 
 	SendToAllChildren(sBuffer);
 }
@@ -575,7 +592,7 @@ public Event_OnPlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	new userid = GetEventInt(event, "userid");
 
 	decl String:sBuffer[20];
-	Format(sBuffer, sizeof(sBuffer), "H%d:%d", userid, GetEventInt(event, "health"));
+	Format(sBuffer, sizeof(sBuffer), "H%d%c%d", userid, DELIMITER, GetEventInt(event, "health"));
 
 	SendToAllChildren(sBuffer);
 }
@@ -599,7 +616,7 @@ public Action SendTeamScores(Handle timer)
 	int nsfScore = GetTeamScore(TEAM_NSF);
 
 	decl String:sBuffer[32];
-	Format(sBuffer, sizeof(sBuffer), "R%d:%d:%d", g_iRoundNumber, jinraiScore, nsfScore);
+	Format(sBuffer, sizeof(sBuffer), "R%d%c%d%c%d", g_iRoundNumber, DELIMITER, jinraiScore, DELIMITER, nsfScore);
 
 	SendToAllChildren(sBuffer);
 }
@@ -621,7 +638,7 @@ public Event_OnChangeName(Handle:event, const String:name[], bool:dontBroadcast)
 		return;
 
 	decl String:sBuffer[MAX_NAME_LENGTH+10];
-	Format(sBuffer, sizeof(sBuffer), "N%d:%s", userid, sNewName);
+	Format(sBuffer, sizeof(sBuffer), "N%d%c%s", userid, DELIMITER, sNewName);
 
 	SendToAllChildren(sBuffer);
 }
@@ -654,7 +671,7 @@ public void Event_OnWeaponEquip(int client, int weapon)
 	}
 
 	char sBuffer[32];
-	Format(sBuffer, sizeof(sBuffer), "E%d:%s", userid, weaponName);
+	Format(sBuffer, sizeof(sBuffer), "E%d%c%s", userid, DELIMITER, weaponName);
 
 	SendToAllChildren(sBuffer);
 
@@ -674,7 +691,7 @@ public void Event_OnWeaponDrop(int client, int weapon)
 	}
 
 	char sBuffer[32];
-	Format(sBuffer, sizeof(sBuffer), "U%d:%s", userid, weaponName);
+	Format(sBuffer, sizeof(sBuffer), "U%d%c%s", userid, DELIMITER, weaponName);
 
 	SendToAllChildren(sBuffer);
 
@@ -690,7 +707,7 @@ public void Event_OnWeaponSwitch_Post(int client, int weapon)
 	g_playerActiveWeapon[client] = weaponName;
 
 	char sBuffer[32];
-	Format(sBuffer, sizeof(sBuffer), "W%d:%s", userid, weaponName);
+	Format(sBuffer, sizeof(sBuffer), "W%d%c%s", userid, DELIMITER, weaponName);
 
 	SendToAllChildren(sBuffer);
 }
@@ -703,7 +720,7 @@ public void OnGhostPickUp(int client)
 	g_playerEquippedWeapons[client] += GetWeaponBit("weapon_ghost");
 
 	char sBuffer[32];
-	Format(sBuffer, sizeof(sBuffer), "E%d:%s", userid, "weapon_ghost");
+	Format(sBuffer, sizeof(sBuffer), "E%d%c%s", userid, DELIMITER, "weapon_ghost");
 
 	SendToAllChildren(sBuffer);
 
@@ -717,7 +734,7 @@ public void OnGhostDrop(int client)
 	g_playerEquippedWeapons[client] -= GetWeaponBit("weapon_ghost");
 
 	char sBuffer[32];
-	Format(sBuffer, sizeof(sBuffer), "U%d:%s", userid, "weapon_ghost");
+	Format(sBuffer, sizeof(sBuffer), "U%d%c%s", userid, DELIMITER, "weapon_ghost");
 
 	SendToAllChildren(sBuffer);
 }
@@ -736,7 +753,7 @@ public Action:CmdLstnr_Say(client, const String:command[], argc)
 	if(client)
 		userid = GetClientUserId(client);
 
-	Format(sBuffer, sizeof(sBuffer), "X%d:%s", userid, sBuffer);
+	Format(sBuffer, sizeof(sBuffer), "X%d%c%s", userid, DELIMITER, sBuffer);
 
 	new iSize = GetArraySize(g_hChildren);
 	for(new i=0;i<iSize;i++)
@@ -781,7 +798,12 @@ public OnWebsocketReadyStateChanged(WebsocketHandle:websocket, WebsocketReadySta
 	GetTeamName(2, sTeam1, sizeof(sTeam1));
 	GetTeamName(3, sTeam2, sizeof(sTeam2));
 	GetConVarString(g_hostname, sHostName, sizeof(sHostName));
-	Format(sBuffer, sizeof(sBuffer), "I%s:%s:%s:%s:%s", sGameFolder, sMap, sTeam1, sTeam2, sHostName);
+	Format(sBuffer, sizeof(sBuffer), "I%s%c%s%c%s%c%s%c%s",
+		sGameFolder, DELIMITER,
+		sMap, DELIMITER,
+		sTeam1, DELIMITER,
+		sTeam2, DELIMITER,
+		sHostName);
 
 	Websocket_Send(websocket, SendType_Text, sBuffer);
 
@@ -789,7 +811,11 @@ public OnWebsocketReadyStateChanged(WebsocketHandle:websocket, WebsocketReadySta
 	{
 		int jinraiScore = GetTeamScore(TEAM_JINRAI);
 		int nsfScore = GetTeamScore(TEAM_NSF);
-		Format(sBuffer, sizeof(sBuffer), "R%d:%d:%d", g_iRoundNumber, jinraiScore, nsfScore);
+		Format(sBuffer, sizeof(sBuffer), "R%d%c%d%c%d",
+			g_iRoundNumber, DELIMITER,
+			jinraiScore, DELIMITER,
+			nsfScore);
+
 		Websocket_Send(websocket, SendType_Text, sBuffer);
 	}
 
@@ -810,7 +836,19 @@ public OnWebsocketReadyStateChanged(WebsocketHandle:websocket, WebsocketReadySta
 		if(IsClientInGame(i))
 		{
 			GetClientAuthId(i, AuthId_SteamID64, sBuffer, sizeof(sBuffer));
-			Format(sBuffer, sizeof(sBuffer), "C%d:%d:%s:%d:%d:%d:%d:%d:%d:%s:%N:%d", GetClientUserId(i), i, sBuffer, GetClientTeam(i), IsPlayerAlive(i), GetClientFrags(i), GetClientDeaths(i), GetClientHealth(i), GetPlayerClass(i), g_playerActiveWeapon[i], i, g_playerEquippedWeapons[i]);
+			Format(sBuffer, sizeof(sBuffer), "C%d%c%d%c%s%c%d%c%d%c%d%c%d%c%d%c%d%c%s%c%N%c%d",
+				GetClientUserId(i), DELIMITER,
+				i, DELIMITER,
+				sBuffer, DELIMITER,
+				GetClientTeam(i), DELIMITER,
+				IsPlayerAlive(i), DELIMITER,
+				GetClientFrags(i), DELIMITER,
+				GetClientDeaths(i), DELIMITER,
+				GetClientHealth(i), DELIMITER,
+				GetPlayerClass(i), DELIMITER,
+				g_playerActiveWeapon[i], DELIMITER,
+				i, DELIMITER,
+				g_playerEquippedWeapons[i]);
 
 			Websocket_Send(websocket, SendType_Text, sBuffer);
 		}
